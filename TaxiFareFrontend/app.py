@@ -6,12 +6,18 @@ import pandas as pd
 from geopy.geocoders import Nominatim
 from streamlit_folium import folium_static
 import folium
+from PIL import Image
+
 
 def get_latlo(address):
     geolocator = Nominatim(user_agent="fed-up")
     location = geolocator.geocode(address)
     loc_stats = (location.latitude, location.longitude)
     return loc_stats
+
+#logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "sidebar_logo.png")) # TO DO: DEFINE PROPER PATH
+img_fed_up = Image.open("fedup_logo.png")
+st.sidebar.image(img_fed_up, width=180)
 
 NYC_center_lat = 41
 NYC_center_lon = -73.6
