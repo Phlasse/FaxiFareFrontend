@@ -1,4 +1,4 @@
-streamlit==0.62.0m
+streamlit==0.62.0
 requests
 geopy
 pandas
