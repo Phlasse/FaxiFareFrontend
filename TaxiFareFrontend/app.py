@@ -1,16 +1,11 @@
 import streamlit as st
 import datetime
 import requests
-#import joblib
 import geopy
-#import geocoder
-#import folium
 import pandas as pd
-#import numpy as np
 from geopy.geocoders import Nominatim
-import warnings
-warnings.filterwarnings("ignore")
-import pydeck as pdk
+from streamlit_folium import folium_static
+import folium
 
 def get_latlo(address):
     geolocator = Nominatim(user_agent="fed-up")
@@ -18,8 +13,8 @@ def get_latlo(address):
     loc_stats = (location.latitude, location.longitude)
     return loc_stats
 
-NYC_center_lat = 40.7408648
-NYC_center_lon = -74.
+NYC_center_lat = 41
+NYC_center_lon = -73.6
 st.subheader("Fed-up TaxiFare Calculator")
 startingpoint = st.sidebar.text_input("Where does your Journey start?", "Empire state building")
 start_point = get_latlo(startingpoint)
@@ -35,24 +30,14 @@ data = pd.DataFrame({
     'lat' : [start_point[0], end_point[0]],
     'lon' : [start_point[1], end_point[1]]
 })
-
-st.pydeck_chart(pdk.Deck(
-        map_style='mapbox://styles/mapbox/light-v9',
-        initial_view_state=pdk.ViewState(
-            latitude=NYC_center_lat,
-            longitude=NYC_center_lon,
-            zoom=10,
-            pitch=50,
-         ),
-         layers=[
-             pdk.Layer(
-                'ScatterplotLayer',
-                filled= True,
-                radiusMinPixels= 4,
-                data=data,
-                get_position='[lon, lat]',
-                get_fill_color='[33, 133, 233]',
-             )],))
+points = [(40, -72.9),(40, -74.3),(42, -72.9),(42, -74.3)]
+m = folium.Map(location=[NYC_center_lat, NYC_center_lon], zoom_start=9, tiles="Stamen Toner")
+folium.Rectangle(bounds=points, color='#5dbb63', fill=True, fill_color='5dbb63', fill_opacity=0.1).add_to(m)
+Start_pin = "Pickup Location"
+folium.Marker([data.lat[0], data.lon[0]], popup="Pickup Location", tooltip=Start_pin).add_to(m)
+End_pin = "Dropoff Location"
+folium.Marker([data.lat[1], data.lon[1]], popup="Dropoff Location", tooltip=End_pin).add_to(m)
+folium_static(m)
 
 key = '2012-10-06 12:10:20.0000001'
 pickup_date = st.sidebar.date_input('pickup datetime', value=datetime.datetime(2021, 10, 6, 12, 10, 20))
