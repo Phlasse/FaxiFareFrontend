@@ -1,48 +1,84 @@
 import streamlit as st
+import datetime
+import requests
+#import joblib
+import geopy
+#import geocoder
+#import folium
+import pandas as pd
+#import numpy as np
+from geopy.geocoders import Nominatim
+import warnings
+warnings.filterwarnings("ignore")
+import pydeck as pdk
 
-'''
-# TaxiFareModel front
-'''
+def get_latlo(address):
+    geolocator = Nominatim(user_agent="fed-up")
+    location = geolocator.geocode(address)
+    loc_stats = (location.latitude, location.longitude)
+    return loc_stats
 
-st.markdown('''
-Remember that there are several ways to output content into your web page...
+NYC_center_lat = 40.7408648
+NYC_center_lon = -74.
+st.subheader("Fed-up TaxiFare Calculator")
+startingpoint = st.sidebar.text_input("Where does your Journey start?", "Empire state building")
+start_point = get_latlo(startingpoint)
+st.sidebar.text(start_point)
+endingpoint = st.sidebar.text_input("Where do you want to go?", "Chrysler building")
+end_point = get_latlo(endingpoint)
+st.sidebar.text(end_point)
+pax_count =  st.sidebar.slider("How many passengers?",1,8, 2)
+time_var = st.sidebar.time_input("When do you want to take a taxi?", value=datetime.datetime(2021, 10, 6, 12, 10, 20))
 
-Either as with the title by just creating a string (or an f-string). Or as with this paragraph using the `st.` functions
-''')
+data = pd.DataFrame({
+    'awesome cities' : ["Start", "End"],
+    'lat' : [start_point[0], end_point[0]],
+    'lon' : [start_point[1], end_point[1]]
+})
 
-'''
-## Here we would like to add some controllers in order to ask the user to select the parameters of the ride
+st.pydeck_chart(pdk.Deck(
+        map_style='mapbox://styles/mapbox/light-v9',
+        initial_view_state=pdk.ViewState(
+            latitude=NYC_center_lat,
+            longitude=NYC_center_lon,
+            zoom=10,
+            pitch=50,
+         ),
+         layers=[
+             pdk.Layer(
+                'ScatterplotLayer',
+                filled= True,
+                radiusMinPixels= 4,
+                data=data,
+                get_position='[lon, lat]',
+                get_fill_color='[33, 133, 233]',
+             )],))
 
-1. Let's ask for:
-- date and time
-- pickup longitude
-- pickup latitude
-- dropoff longitude
-- dropoff latitude
-- passenger count
-'''
+key = '2012-10-06 12:10:20.0000001'
+pickup_date = st.sidebar.date_input('pickup datetime', value=datetime.datetime(2021, 10, 6, 12, 10, 20))
+pickup_datetime = f'{pickup_date} {time_var}UTC'
+pickup_longitude = start_point[1]
+pickup_latitude = start_point[0]
+dropoff_longitude = end_point[1]
+dropoff_latitude = end_point[0]
+passenger_count = pax_count
 
-'''
-## Once we have these, let's call our API in order to retrieve a prediction
+url = 'https://taxiapi-pude6ihnsq-ew.a.run.app/predict_fare'
+params = dict(
+    key=key,
+    pickup_datetime=pickup_datetime,
+    pickup_longitude=pickup_longitude,
+    pickup_latitude=pickup_latitude,
+    dropoff_longitude=dropoff_longitude,
+    dropoff_latitude=dropoff_latitude,
+    passenger_count=passenger_count)
 
-See ? No need to load a `model.joblib` file in this app, we do not even need to know anything about Data Science in order to retrieve a prediction...
+response = requests.get(url, params=params)
 
-🤔 How could we call our API ? Off course... The `requests` package 💡
-'''
-
-url = 'https://taxifare.lewagon.ai/predict_fare/'
-
-if url == 'https://taxifare.lewagon.ai/predict_fare/':
-
-    st.markdown('Maybe you want to use your own API for the prediction, not the one provided by Le Wagon...')
-
-'''
-
-2. Let's build a dictionary containing the parameters for our API...
-
-3. Let's call our API using the `requests` package...
-
-4. Let's retrieve the prediction from the **JSON** returned by the API...
-
-## Finally, we can display the prediction to the user
-'''
+prediction = response.json()
+if (data.lat[0] <= 40) or (data.lat[0] >=42) or (data.lon[0] <= -74.3) or (data.lon[0] >=-72.9):
+    st.sidebar.warning("Your pickup location is out of range")
+elif (data.lat[1] <= 40) or (data.lat[1] >=42) or (data.lon[1] <= -74.3) or (data.lon[1] >=-72.9):
+    st.sidebar.warning("Your pickup location is out of range")
+else:
+    st.success(f'The estimated Fare will be {round(prediction["fare_amount"],2)} $')
